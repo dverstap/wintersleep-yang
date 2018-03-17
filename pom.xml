@@ -188,8 +188,37 @@
                     <version>1.6.0</version>
                 </plugin>
                 <plugin>
-                    <artifactId>kotlin-maven-plugin</artifactId>
+                    <groupId>org.codehaus.mojo</groupId>
+                    <artifactId>license-maven-plugin</artifactId>
+                    <version>1.14</version>
+                    <executions>
+                        <execution>
+                            <phase>process-sources</phase>
+                            <goals>
+                                <goal>check-file-header</goal>
+                            </goals>
+                            <configuration>
+                                <failOnMissingHeader>true</failOnMissingHeader>
+                            </configuration>
+                        </execution>
+                    </executions>
+                    <configuration>
+                        <organizationName>Davy Verstappen</organizationName>
+                        <inceptionYear>2017</inceptionYear>
+                        <licenseName>apache_v2</licenseName>
+                        <addJavaLicenseAfterPackage>false</addJavaLicenseAfterPackage>
+                        <roots>
+                            <!-- skip generated sources: -->
+                            <root>src</root>
+                        </roots>
+                        <excludes>
+                            <exclude>main/yang/**/docs/*.xml</exclude>
+                        </excludes>
+                    </configuration>
+                </plugin>
+                <plugin>
                     <groupId>org.jetbrains.kotlin</groupId>
+                    <artifactId>kotlin-maven-plugin</artifactId>
                     <version>${kotlin.version}</version>
                     <executions>
                         <execution>
