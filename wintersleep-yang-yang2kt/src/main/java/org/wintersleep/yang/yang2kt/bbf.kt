@@ -1,6 +1,9 @@
 package org.wintersleep.yang.yang2kt
 
 import org.opendaylight.yangtools.yang.common.QName
+import org.opendaylight.yangtools.yang.model.api.ContainerSchemaNode
+import org.opendaylight.yangtools.yang.model.api.DataNodeContainer
+import org.opendaylight.yangtools.yang.model.api.DataSchemaNode
 import org.opendaylight.yangtools.yang.model.api.type.EnumTypeDefinition
 import org.opendaylight.yangtools.yang.test.util.YangParserTestUtils
 import java.io.File
@@ -32,9 +35,9 @@ fun main(args: Array<String>) {
     val enumTypes = HashSet<EnumTypeDefinition>()
     val schemaContext = YangParserTestUtils.parseYangSources(files)
     for (m in schemaContext.modules) {
-        println(m.name)
+        //println(m.name)
         for (dataDefinition in m.childNodes) {
-            //println("  " + dataDefinition.qName)
+            generateDataContainers(dataDefinition, "  ", outputDir)
         }
         for (sm in m.submodules) {
             for (typeDefinition in sm.typeDefinitions) {
@@ -66,5 +69,18 @@ fun main(args: Array<String>) {
         EnumTypeGenerator(enumType, outputDir).generate()
     }
     println(enumTypes.size)
+
+}
+
+fun generateDataContainers(dataSchemaNode: DataSchemaNode, indent: String, outputDir: File) {
+    //println(indent + dataSchemaNode.path.lastComponent.localName)
+    if (dataSchemaNode is DataNodeContainer) {
+        if (dataSchemaNode is ContainerSchemaNode) {
+            DataNodeContainerGenerator(dataSchemaNode, outputDir).generate()
+        }
+        for (childNode in dataSchemaNode.childNodes) {
+            generateDataContainers(childNode, indent + "  ", outputDir)
+        }
+    }
 }
 
