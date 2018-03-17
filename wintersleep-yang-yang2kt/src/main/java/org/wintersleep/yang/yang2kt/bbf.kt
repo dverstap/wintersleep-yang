@@ -33,7 +33,7 @@ fun main(args: Array<String>) {
 
     val typeNames = TreeMap<QName, Class<Any>>()
     val enumTypes = HashSet<EnumTypeDefinition>()
-    val schemaContext = YangParserTestUtils.parseYangSources(files)
+    val schemaContext = YangParserTestUtils.parseYangFiles(files)
     for (m in schemaContext.modules) {
         //println(m.name)
         for (dataDefinition in m.childNodes) {
