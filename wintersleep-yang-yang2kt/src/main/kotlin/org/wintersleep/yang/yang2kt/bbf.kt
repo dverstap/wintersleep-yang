@@ -7,6 +7,7 @@ import org.opendaylight.yangtools.yang.model.api.DataSchemaNode
 import org.opendaylight.yangtools.yang.model.api.type.EnumTypeDefinition
 import org.opendaylight.yangtools.yang.test.util.YangParserTestUtils
 import java.io.File
+import java.nio.file.Paths
 import java.util.*
 
 
@@ -25,10 +26,12 @@ fun findFiles(parent: File, result: MutableList<File>): List<File> {
 }
 
 fun main(args: Array<String>) {
-    val outputDir = File("wintersleep-yang-bbf/target/generated-sources/yang")
+    val topDir = findTopDir()
+
+    val outputDir = File(topDir, "target/generated-sources/yang")
 
     val files = ArrayList<File>()
-    findFiles(File("wintersleep-yang-bbf/src/main/yang"), files)
+    findFiles(File(topDir, "src/main/yang"), files)
     println(files)
 
     val typeNames = TreeMap<QName, Class<Any>>()
@@ -36,9 +39,9 @@ fun main(args: Array<String>) {
     val schemaContext = YangParserTestUtils.parseYangFiles(files)
     for (m in schemaContext.modules) {
         //println(m.name)
-        for (dataDefinition in m.childNodes) {
-            generateDataContainers(dataDefinition, "  ", outputDir)
-        }
+//        for (dataDefinition in m.childNodes) {
+//            generateDataContainers(dataDefinition, "  ", outputDir)
+//        }
         for (sm in m.submodules) {
             for (typeDefinition in sm.typeDefinitions) {
                 //println("  " + typeDefinition.qName + ": " + typeDefinition.javaClass.name)
@@ -70,6 +73,14 @@ fun main(args: Array<String>) {
     }
     println(enumTypes.size)
 
+}
+
+fun findTopDir(): File {
+    val pwd = Paths.get("").toAbsolutePath()
+    if (pwd.endsWith(Paths.get("wintersleep-yang-bbf"))) {
+        return pwd.toFile()
+    }
+    return pwd.resolve("wintersleep-yang-bbf").toFile()
 }
 
 fun generateDataContainers(dataSchemaNode: DataSchemaNode, indent: String, outputDir: File) {

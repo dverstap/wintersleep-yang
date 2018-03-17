@@ -27,7 +27,6 @@ class DataNodeContainerGenerator(
                 .addType(classBuilder.build())
                 .build()
         file.writeTo(outputDir)
-
     }
 
 

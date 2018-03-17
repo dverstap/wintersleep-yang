@@ -14,8 +14,8 @@ internal class EnumTypeGenerator(
         val className = ClassName("org.wintersleep.yang.bbf", classShortName)
         val enumBuilder = TypeSpec.enumBuilder(className)
                 .primaryConstructor(FunSpec.constructorBuilder()
-                        .addParameter(ParameterSpec.builder("yangName", String::class).build())
-                        .addParameter(ParameterSpec.builder("yangValue", Int::class).build())
+                        .addParameter(ParameterSpec.builder("val yangName", String::class).build())
+                        .addParameter(ParameterSpec.builder("val yangValue", Int::class).build())
                         .build())
         for ((k, v) in definition.values) {
 
@@ -50,10 +50,12 @@ fun String.codeClassName(): String {
 }
 
 private fun String.codeEnumClassName(): String {
+    // We want the names to be usable in Java as well, plus putting backticks
+    // around the names (in Kotlin) is not very convenient either.
+    return this.replace('-', '_')
     // Like Square Wire, not changing this to upper-case, to stick closer to the original name.
     // Although in this case, it's less interesting, because we have to change the name anyway in some cases.
-    //return this.replace('-', '_')
-    return codeName()
+    // return codeName()
 }
 
 fun String.codeName(): String {
