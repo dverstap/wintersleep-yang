@@ -20,45 +20,60 @@
 package org.wintersleep.yang.yang2kt
 
 import com.squareup.kotlinpoet.*
+import org.opendaylight.yangtools.yang.common.QName
 import org.opendaylight.yangtools.yang.model.api.type.EnumTypeDefinition
+import org.wintersleep.yang.model.YangEnum
 import java.io.File
+import java.net.URI
 
 internal class EnumTypeGenerator(
+        private val outputDir: File,
         private val definition: EnumTypeDefinition,
-        private val outputDir: File
+        private val qName: QName = definition.qName
 ) {
 
-    fun generate() {
-        val classShortName = definition.qName.localName.codeClassName()
-        val className = ClassName("org.wintersleep.yang.bbf", classShortName)
+    fun generate(): ClassName {
+        val className = qName.toClassName()
         val enumBuilder = TypeSpec.enumBuilder(className)
+                .addSuperinterface(YangEnum::class)
                 .primaryConstructor(FunSpec.constructorBuilder()
-                        .addParameter(ParameterSpec.builder("val yangName", String::class).build())
-                        .addParameter(ParameterSpec.builder("val yangValue", Int::class).build())
+                        .addParameter(ParameterSpec.builder("val yangName", String::class)
+                                .addModifiers(KModifier.OVERRIDE)
+                                .build())
+                        .addParameter(ParameterSpec.builder("val yangValue", Int::class)
+                                .addModifiers(KModifier.OVERRIDE)
+                                .build())
                         .build())
         for ((k, v) in definition.values) {
-
-            var constantName = k.codeEnumClassName()
-            if (constantName == classShortName) {
-                constantName = "_" + constantName;
-            }
-            enumBuilder.addEnumConstant(constantName,
+            enumBuilder.addEnumConstant(k.codeEnumConstantName(),
                     TypeSpec.anonymousClassBuilder("\"%L\", %L", k, v).build())
         }
-
         val file = FileSpec.builder(className.packageName(), className.simpleName())
                 .addType(enumBuilder.build())
                 .build()
+        //println("Writing: " + className)
         file.writeTo(outputDir)
+        return className
     }
 
 }
+
+private fun QName.toClassName(): ClassName {
+    val classShortName = this.localName.codeClassName()
+    val packageName = this.namespace.codePackageName()
+    return ClassName(packageName, classShortName)
+}
+
 
 private fun String.upCaseFirst(): CharSequence {
     if (isEmpty()) {
         return this
     }
     return get(0).toUpperCase() + substring(1)
+}
+
+fun URI.codePackageName(): String {
+    return this.toString().replace(':', '.').replace('-', '_')
 }
 
 fun String.codeClassName(): String {
@@ -68,10 +83,17 @@ fun String.codeClassName(): String {
     return parts.joinToString(separator = "", transform = { it.upCaseFirst() })
 }
 
-private fun String.codeEnumClassName(): String {
+private fun String.codeEnumConstantName(): String {
     // We want the names to be usable in Java as well, plus putting backticks
     // around the names (in Kotlin) is not very convenient either.
-    return this.replace('-', '_')
+    if (this == "open" || this == "short") {
+        return "_" + this
+    }
+    val result = this.replace('-', '_').replace('.', '_')
+    if (!Character.isJavaIdentifierStart(result[0])) {
+        return "_" + result
+    }
+    return result
     // Like Square Wire, not changing this to upper-case, to stick closer to the original name.
     // Although in this case, it's less interesting, because we have to change the name anyway in some cases.
     // return codeName()
