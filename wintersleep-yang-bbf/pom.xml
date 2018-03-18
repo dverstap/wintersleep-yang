@@ -76,7 +76,7 @@
                     </execution>
                 </executions>
                 <configuration>
-                    <mainClass>org.wintersleep.yang.yang2kt.MainKt</mainClass>
+                    <mainClass>org.wintersleep.yang.codegen.MainKt</mainClass>
                     <!--
                     <arguments>
                         <argument>argument1</argument>
@@ -88,7 +88,7 @@
                 <dependencies>
                     <dependency>
                         <groupId>org.wintersleep.yang</groupId>
-                        <artifactId>wintersleep-yang-yang2kt</artifactId>
+                        <artifactId>wintersleep-yang-codegen</artifactId>
                         <version>${project.version}</version>
                     </dependency>
                 </dependencies>

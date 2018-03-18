@@ -17,7 +17,7 @@
  * limitations under the License.
  * #L%
  */
-package org.wintersleep.yang.yang2kt
+package org.wintersleep.yang.codegen
 
 import com.squareup.kotlinpoet.*
 import org.opendaylight.yangtools.yang.common.QName
