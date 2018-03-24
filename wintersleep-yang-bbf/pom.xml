@@ -3,13 +3,13 @@
     <modelVersion>4.0.0</modelVersion>
     <artifactId>wintersleep-yang-bbf</artifactId>
     <packaging>jar</packaging>
-    <version>0.1-SNAPSHOT</version>
+    <version>master-SNAPSHOT</version>
     <name>${project.groupId}:${project.artifactId}</name>
 
     <parent>
         <groupId>org.wintersleep.yang</groupId>
         <artifactId>wintersleep-yang</artifactId>
-        <version>0.1-SNAPSHOT</version>
+        <version>master-SNAPSHOT</version>
     </parent>
 
     <dependencies>
@@ -63,6 +63,8 @@
     </dependencies>
 
     <build>
+        <!-- Needed for dokka-maven-plugin -->
+        <sourceDirectory>${project.build.directory}/generated-sources/yang</sourceDirectory>
         <plugins>
             <plugin>
                 <groupId>org.codehaus.mojo</groupId>
@@ -120,7 +122,6 @@
                             </sourceDirs>
                         </configuration>
                     </execution>
-
                 </executions>
             </plugin>
             <plugin>
