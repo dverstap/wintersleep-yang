@@ -19,16 +19,26 @@
  */
 package org.wintersleep.yang.codegen
 
+import com.squareup.kotlinpoet.ClassName
 import org.opendaylight.yangtools.yang.common.QName
-import org.opendaylight.yangtools.yang.model.api.*
+import org.opendaylight.yangtools.yang.model.api.DataNodeContainer
+import org.opendaylight.yangtools.yang.model.api.SchemaContext
+import org.opendaylight.yangtools.yang.model.api.SchemaPath
 import org.opendaylight.yangtools.yang.model.api.type.EnumTypeDefinition
 import org.opendaylight.yangtools.yang.test.util.YangParserTestUtils.parseYangFiles
 import org.wintersleep.yang.schema.YangTools.findMyModuleTopDir
 import org.wintersleep.yang.schema.YangTools.findYangFiles
 import org.wintersleep.yang.schema.allTypedDataSchemaNodes
+import org.yaml.snakeyaml.DumperOptions
+import org.yaml.snakeyaml.Yaml
+import org.yaml.snakeyaml.nodes.Node
+import org.yaml.snakeyaml.nodes.Tag
+import org.yaml.snakeyaml.representer.Representer
 import java.io.File
+import java.net.URI
 import java.util.*
 import kotlin.collections.LinkedHashMap
+
 
 fun main(args: Array<String>) {
     val topDir = findMyModuleTopDir("wintersleep-yang-bbf")
@@ -39,16 +49,64 @@ fun main(args: Array<String>) {
     val beginParseTimestamp = System.currentTimeMillis()
     val schemaContext = parseYangFiles(files)
     val parseDuration = System.currentTimeMillis() - beginParseTimestamp
-
+    validateAssumptions(schemaContext)
     val beginCodeGenTimestamp = System.currentTimeMillis()
+
     val enumTypesMap = getEnumTypesMap(schemaContext)
     for (entry in enumTypesMap) {
         EnumTypeGenerator(outputDir, entry.value, entry.key).generate()
     }
     println("#Enum types:" + enumTypesMap.size)
+
+    val classNames = HashSet<ClassName>()
+    for (childNode in schemaContext.childNodes) {
+        if (childNode is DataNodeContainer) {
+            DataNodeContainerGenerator(classNames, childNode, outputDir).generate()
+        }
+    }
+
+    //var nodeCount = 0
+    val tree = LinkedHashMap<String, Any>()
+    for (childNode in schemaContext.childNodes) {
+//        val childName = childNode.qName.localName
+        // val childName = childNode.path.toLocalPath()
+        val childName = childNode.path.last
+        tree[childName] = TreeGenerator(childNode, "").generate()
+    }
+    //println("#nodes: $nodeCount")
+
     val codeGenDuration = System.currentTimeMillis() - beginCodeGenTimestamp
     println("Parse phase duration:           $parseDuration")
     println("Code generation phase duration: $codeGenDuration")
+
+    val options = DumperOptions()
+    options.indent = 2
+    options.defaultFlowStyle = DumperOptions.FlowStyle.BLOCK
+    val yaml = Yaml(EmptyNullRepresenter(), options);
+    File("tree.yaml").writeText(yaml.dump(tree))
+}
+
+class EmptyNullRepresenter : Representer() {
+    override fun representScalar(tag: Tag?, value: String?): Node {
+        if (value == "null") {
+            return representScalar(tag, "", DumperOptions.ScalarStyle.PLAIN)
+        }
+        return super.representScalar(tag, value)
+    }
+}
+
+
+fun validateAssumptions(schemaContext: SchemaContext) {
+    for (module in schemaContext.modules) {
+        if (module.name != module.namespace.last) {
+            throw IllegalArgumentException("Module name ${module.name} does not match last part of module namespace ${module.namespace}")
+        }
+        for (submodule in module.submodules) {
+            if (module.name != submodule.namespace.last) {
+                throw IllegalArgumentException("Module name ${module.name} does not match last part of submodule namespace ${submodule.namespace}")
+            }
+        }
+    }
 }
 
 //fun generateDataContainers(dataSchemaNode: DataSchemaNode, indent: String, outputDir: File) {

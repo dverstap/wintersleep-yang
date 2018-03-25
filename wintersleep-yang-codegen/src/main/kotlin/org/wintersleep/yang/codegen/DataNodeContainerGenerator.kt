@@ -20,33 +20,174 @@
 package org.wintersleep.yang.codegen
 
 import com.squareup.kotlinpoet.*
-import org.opendaylight.yangtools.yang.model.api.ContainerSchemaNode
+import org.opendaylight.yangtools.yang.model.api.*
+import org.wintersleep.yang.model.YangContainerMetaData
+import org.wintersleep.yang.model.YangNodeMetaData
 import java.io.File
-import javax.xml.namespace.QName
 
 class DataNodeContainerGenerator(
-        private val schemaNode: ContainerSchemaNode,
+        private val classNames: MutableSet<ClassName>,
+        private val schemaNode: DataNodeContainer,
         private val outputDir: File
 ) {
 
     fun generate() {
-        val classShortName = schemaNode.path.lastComponent.localName.codeClassName()
-        val className = ClassName("org.wintersleep.yang.bbf", classShortName)
-        val classBuilder = TypeSpec.classBuilder(className)
+        generateClass()
         for (childNode in schemaNode.childNodes) {
-            classBuilder.addProperty(PropertySpec.builder(
-                    childNode.path.lastComponent.localName.codeName(),
-                    QName::class)
-                    .initializer("QName(%S, %S)",
-                            childNode.path.lastComponent.namespace,
-                            childNode.path.lastComponent.localName)
-                    .build())
+            if (childNode is DataNodeContainer) {
+                DataNodeContainerGenerator(classNames, childNode, outputDir).generate()
+            }
         }
-        val file = FileSpec.builder(className.packageName(), className.simpleName())
-                .addType(classBuilder.build())
-                .build()
-        file.writeTo(outputDir)
     }
 
+    private fun generateClass() {
+        val className = makeClassName(schemaNode)
+        if (className != null) {
+            val sn = schemaNode as SchemaNode
+            if (className in classNames) {
+                //className = ClassName(className.packageName(), className.simpleName() + "2")
+                throw IllegalArgumentException("Duplicated class $className for $schemaNode")
+            } else {
+                classNames.add(className)
+            }
+            // class DownstreamMetaData(yangParent: YangContainerMetaData? = null) : YangContainerMetaData(yangParent, "", "", "") {
+            /*
+                                    childNode.moduleName,
+                        childNode.path.lastComponent.namespace,
+                        childNode.path.lastComponent.localName)
 
+             */
+            val classBuilder = TypeSpec.classBuilder(className)
+                    .superclass(YangContainerMetaData::class)
+                    //.addTypeVariable(TypeVariableName.invoke("parent", YangNodeMetaData::class))
+                    .primaryConstructor(FunSpec.constructorBuilder()
+//                            .addParameter("yangParent",
+//                                    YangContainerMetaData::class.asTypeName().asNullable())
+                            .addParameter(ParameterSpec.builder("yangParent",
+                                    YangContainerMetaData::class.asTypeName().asNullable())
+                                    .defaultValue("null")
+                                    .build())
+                            .build())
+                    .addSuperclassConstructorParameter("yangParent")
+                    .addSuperclassConstructorParameter(quote(sn.moduleName))
+                    .addSuperclassConstructorParameter(quote(sn.path.lastComponent.namespace))
+                    .addSuperclassConstructorParameter(quote(sn.path.lastComponent.localName))
+            val duplicateFieldNames = makeDuplicateFieldNamesSet()
+//            if (duplicateFieldNames.isNotEmpty()) {
+//                println(duplicateFieldNames)
+//            }
+            for (childNode in schemaNode.childNodes) {
+                addProperty(classBuilder, duplicateFieldNames, childNode)
+            }
+            //println("Writing $className")
+            val file = FileSpec.builder(className.packageName(), className.simpleName())
+                    .addType(classBuilder.build())
+                    .build()
+            file.writeTo(outputDir)
+        } else {
+            throw IllegalArgumentException("Skipping generateClass because of no ClassName: " + schemaNode)
+        }
+    }
+
+    private fun quote(arg: Any) = "\"$arg\""
+
+    private fun makeDuplicateFieldNamesSet(): Set<String> {
+        val all = HashSet<String>()
+        val result = HashSet<String>()
+        for (childNode in schemaNode.childNodes) {
+            val fieldName = fieldName(childNode)
+            if (fieldName in all) {
+                result.add(fieldName)
+            } else {
+                all.add(fieldName)
+            }
+        }
+        return result
+    }
+
+    private fun addProperty(classBuilder: TypeSpec.Builder, duplicateFieldNames: Set<String>, childNode: DataSchemaNode) {
+//        if (!addContainerField(classBuilder, childNode)) {
+//            addLeafProperty(classBuilder, childNode)
+//        }
+        if (childNode is DataNodeContainer) {
+            val childClassName = makeClassName(childNode)
+            if (childClassName != null) {
+                classBuilder.addProperty(PropertySpec.builder(
+                        uniqueFieldName(childNode, duplicateFieldNames),
+                        childClassName)
+                        .initializer(childClassName.canonicalName + "(this)")
+                        .addAnnotation(JvmField::class)
+                        .build())
+            } else {
+                //println("Skipping addProperty because of no class name: $childNode")
+                addLeafProperty(classBuilder, childNode)
+            }
+        } else {
+            //println("Skipping addProperty because it is not a DataNodeContainer: $childNode")
+            addLeafProperty(classBuilder, childNode)
+        }
+    }
+
+    private fun fieldName(childNode: DataSchemaNode): String {
+        return fieldName(childNode.path)
+    }
+
+    private fun fieldName(path: SchemaPath): String {
+        return path.lastComponent.localName.codeName()
+    }
+
+    private fun uniqueFieldName(childNode: DataSchemaNode, duplicateFieldNames: Set<String>): String {
+        val fieldName = fieldName(childNode)
+        if (fieldName in duplicateFieldNames) {
+            return childNode.path.lastComponent.namespace.last.codeName() + "_" + fieldName
+        }
+        return fieldName
+    }
+
+    private fun addLeafProperty(classBuilder: TypeSpec.Builder, childNode: DataSchemaNode) {
+        classBuilder.addProperty(PropertySpec.builder(
+                childNode.path.lastComponent.localName.codeName(),
+                YangNodeMetaData::class)
+                .initializer("YangNodeMetaData(this, %S, %S, %S)",
+                        //childNode.path.lastComponent.module,
+                        childNode.moduleName,
+                        childNode.path.lastComponent.namespace,
+                        childNode.path.lastComponent.localName)
+                .addAnnotation(JvmField::class)
+                .build())
+    }
+
+    private fun addContainerField(classBuilder: TypeSpec.Builder, childNode: DataSchemaNode): Boolean {
+        if (childNode is ContainerSchemaNode) {
+            val className = makeClassName(childNode)
+            if (className != null) {
+                classBuilder.addProperty(PropertySpec.builder(
+                        childNode.path.lastComponent.localName.codeName(),
+                        className)
+                        .initializer(className.canonicalName + "()")
+                        .addAnnotation(JvmField::class)
+                        .build())
+                return true
+            }
+        }
+        return false
+    }
+
+    private fun makeClassName(container: DataNodeContainer): ClassName? {
+        // Using the namespace for packages generates duplicated classes,
+        // which have and need to have different content. See for instance
+        // InterfaceMetaData (under interfaces/interfaces-state).
+        // This is why we use the xml/json tree for the package names.
+        return if (container is ContainerSchemaNode) {
+            container.path.toTreeClassName("MetaData")
+        } else if (container is ListSchemaNode) {
+            container.path.toTreeClassName("MetaData")
+        } else if (container is GroupingDefinition) {
+//            container.path.lastComponent.toClassName("Group")
+            throw IllegalArgumentException()
+        } else {
+            // TODO more types?
+            null
+        }
+    }
 }

@@ -24,7 +24,6 @@ import org.opendaylight.yangtools.yang.common.QName
 import org.opendaylight.yangtools.yang.model.api.type.EnumTypeDefinition
 import org.wintersleep.yang.model.YangEnum
 import java.io.File
-import java.net.URI
 
 internal class EnumTypeGenerator(
         private val outputDir: File,
@@ -33,7 +32,7 @@ internal class EnumTypeGenerator(
 ) {
 
     fun generate(): ClassName {
-        val className = qName.toClassName()
+        val className = qName.toNamespaceClassName()
         val enumBuilder = TypeSpec.enumBuilder(className)
                 .addSuperinterface(YangEnum::class)
                 .primaryConstructor(FunSpec.constructorBuilder()
@@ -56,58 +55,6 @@ internal class EnumTypeGenerator(
         return className
     }
 
-}
-
-private fun QName.toClassName(): ClassName {
-    val classShortName = this.localName.codeClassName()
-    val packageName = this.namespace.codePackageName()
-    return ClassName(packageName, classShortName)
-}
-
-
-private fun String.upCaseFirst(): CharSequence {
-    if (isEmpty()) {
-        return this
-    }
-    return get(0).toUpperCase() + substring(1)
-}
-
-fun URI.codePackageName(): String {
-    return this.toString().replace(':', '.').replace('-', '_')
-}
-
-fun String.codeClassName(): String {
-    // classname with dashes are not valid according to ASM:
-    // return codeName()
-    val parts = split('-')
-    return parts.joinToString(separator = "", transform = { it.upCaseFirst() })
-}
-
-private fun String.codeEnumConstantName(): String {
-    // We want the names to be usable in Java as well, plus putting backticks
-    // around the names (in Kotlin) is not very convenient either.
-    if (this == "open" || this == "short") {
-        return "_" + this
-    }
-    val result = this.replace('-', '_').replace('.', '_')
-    if (!Character.isJavaIdentifierStart(result[0])) {
-        return "_" + result
-    }
-    return result
-    // Like Square Wire, not changing this to upper-case, to stick closer to the original name.
-    // Although in this case, it's less interesting, because we have to change the name anyway in some cases.
-    // return codeName()
-}
-
-fun String.codeName(): String {
-    var result = this.replace('.', '_')
-    if ('-' in result) {
-        result = "`" + result + "`"
-    }
-    if (result == "interface") {
-        result += "_"
-    }
-    return result
 }
 
 private operator fun EnumTypeDefinition.EnumPair.component2(): Int {

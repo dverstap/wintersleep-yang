@@ -12,7 +12,7 @@
 
     <properties>
         <dokka.version>0.9.16</dokka.version>
-        <kotlin.version>1.2.30</kotlin.version>
+        <kotlin.version>1.2.31</kotlin.version>
         <maven.compiler.source>1.8</maven.compiler.source>
         <maven.compiler.target>1.8</maven.compiler.target>
         <org.opendaylight.yangtools.version>2.0.2</org.opendaylight.yangtools.version>
@@ -171,6 +171,11 @@
                 <artifactId>wintersleep-yang-yang2kt</artifactId>
                 <classifier>tests</classifier>
                 <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.yaml</groupId>
+                <artifactId>snakeyaml</artifactId>
+                <version>1.20</version>
             </dependency>
         </dependencies>
     </dependencyManagement>
