@@ -21,9 +21,13 @@ package org.wintersleep.yang.codegen
 
 import com.squareup.kotlinpoet.*
 import org.opendaylight.yangtools.yang.model.api.*
-import org.wintersleep.yang.model.YangContainerMetaData
-import org.wintersleep.yang.model.YangNodeMetaData
+import org.opendaylight.yangtools.yang.model.api.type.BooleanTypeDefinition
+import org.opendaylight.yangtools.yang.model.api.type.Int32TypeDefinition
+import org.opendaylight.yangtools.yang.model.api.type.Uint32TypeDefinition
+import org.opendaylight.yangtools.yang.model.api.type.Uint64TypeDefinition
+import org.wintersleep.yang.model.*
 import java.io.File
+import kotlin.reflect.KClass
 
 class DataNodeContainerGenerator(
         private val classNames: MutableSet<ClassName>,
@@ -50,19 +54,9 @@ class DataNodeContainerGenerator(
             } else {
                 classNames.add(className)
             }
-            // class DownstreamMetaData(yangParent: YangContainerMetaData? = null) : YangContainerMetaData(yangParent, "", "", "") {
-            /*
-                                    childNode.moduleName,
-                        childNode.path.lastComponent.namespace,
-                        childNode.path.lastComponent.localName)
-
-             */
             val classBuilder = TypeSpec.classBuilder(className)
                     .superclass(YangContainerMetaData::class)
-                    //.addTypeVariable(TypeVariableName.invoke("parent", YangNodeMetaData::class))
                     .primaryConstructor(FunSpec.constructorBuilder()
-//                            .addParameter("yangParent",
-//                                    YangContainerMetaData::class.asTypeName().asNullable())
                             .addParameter(ParameterSpec.builder("yangParent",
                                     YangContainerMetaData::class.asTypeName().asNullable())
                                     .defaultValue("null")
@@ -145,11 +139,11 @@ class DataNodeContainerGenerator(
     }
 
     private fun addLeafProperty(classBuilder: TypeSpec.Builder, childNode: DataSchemaNode) {
+        val parameterType = determineYangParameterType(childNode)
         classBuilder.addProperty(PropertySpec.builder(
                 childNode.path.lastComponent.localName.codeName(),
-                YangNodeMetaData::class)
-                .initializer("YangNodeMetaData(this, %S, %S, %S)",
-                        //childNode.path.lastComponent.module,
+                parameterType)
+                .initializer("${parameterType.simpleName}(this, %S, %S, %S)",
                         childNode.moduleName,
                         childNode.path.lastComponent.namespace,
                         childNode.path.lastComponent.localName)
@@ -157,21 +151,37 @@ class DataNodeContainerGenerator(
                 .build())
     }
 
-    private fun addContainerField(classBuilder: TypeSpec.Builder, childNode: DataSchemaNode): Boolean {
-        if (childNode is ContainerSchemaNode) {
-            val className = makeClassName(childNode)
-            if (className != null) {
-                classBuilder.addProperty(PropertySpec.builder(
-                        childNode.path.lastComponent.localName.codeName(),
-                        className)
-                        .initializer(className.canonicalName + "()")
-                        .addAnnotation(JvmField::class)
-                        .build())
-                return true
+    private fun determineYangParameterType(childNode: DataSchemaNode): KClass<*> {
+        if (childNode is TypedDataSchemaNode) {
+            // TODO visitor pattern
+            if (childNode.type is BooleanTypeDefinition || childNode.type.baseType is BooleanTypeDefinition) {
+                return YangBooleanParameter::class
+            } else if (childNode.type is Int32TypeDefinition || childNode.type.baseType is Int32TypeDefinition) {
+                return YangIntegerParameter::class
+            } else if (childNode.type is Uint32TypeDefinition || childNode.type.baseType is Uint32TypeDefinition) {
+                return YangUnsignedIntegerParameter::class
+            } else if (childNode.type is Uint64TypeDefinition || childNode.type.baseType is Uint64TypeDefinition) {
+                return YangUnsignedLongParameter::class
             }
         }
-        return false
+        return YangJsonParameter::class
     }
+
+//    private fun addContainerField(classBuilder: TypeSpec.Builder, childNode: DataSchemaNode): Boolean {
+//        if (childNode is ContainerSchemaNode) {
+//            val className = makeClassName(childNode)
+//            if (className != null) {
+//                classBuilder.addProperty(PropertySpec.builder(
+//                        childNode.path.lastComponent.localName.codeName(),
+//                        className)
+//                        .initializer(className.canonicalName + "()")
+//                        .addAnnotation(JvmField::class)
+//                        .build())
+//                return true
+//            }
+//        }
+//        return false
+//    }
 
     private fun makeClassName(container: DataNodeContainer): ClassName? {
         // Using the namespace for packages generates duplicated classes,
