@@ -19,13 +19,14 @@
  */
 package org.wintersleep.yang.model
 
+import com.google.common.base.Preconditions
 import javax.json.JsonObject
-import javax.json.JsonValue
+import javax.json.JsonString
 
-class YangBooleanParameter(yangParent: YangContainerMetaData, yangModule: String, yangNamespace: String, yangName: String)
-    : YangAbstractParameter<Boolean, JsonValue>(yangParent, yangModule, yangNamespace, yangName, JsonValue::class.java) {
+class YangStringParameter(yangParent: YangContainerMetaData, yangModule: String, yangNamespace: String, yangName: String)
+    : YangAbstractParameter<String, JsonString>(yangParent, yangModule, yangNamespace, yangName, JsonString::class.java) {
 
-    override fun findValue(obj: JsonObject): Boolean? {
+    override fun findValue(obj: JsonObject): String? {
         val jsonValue = findJsonValue(obj)
         if (jsonValue != null) {
             return convert(jsonValue)
@@ -33,17 +34,14 @@ class YangBooleanParameter(yangParent: YangContainerMetaData, yangModule: String
         return null
     }
 
-    override fun getValue(obj: JsonObject): Boolean {
+    override fun getValue(obj: JsonObject): String {
         val value = getJsonValue(obj)
         return convert(value)
     }
 
-    private fun convert(value: JsonValue): Boolean {
-        return when (value.valueType) {
-            JsonValue.ValueType.TRUE -> java.lang.Boolean.TRUE
-            JsonValue.ValueType.FALSE -> java.lang.Boolean.FALSE
-            else -> throw IllegalArgumentException("Not a valid boolean: " + value)
-        }
+    private fun convert(jsonValue: JsonString): String {
+        Preconditions.checkNotNull(jsonValue.string, "$jsonFullPath: string parameter value is not allowed to be null.")
+        return jsonValue.string
     }
 
 }

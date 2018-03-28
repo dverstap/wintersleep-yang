@@ -20,18 +20,12 @@
 package org.wintersleep.yang.model
 
 import javax.json.JsonNumber
-import javax.json.JsonObject
 
 class YangIntegerParameter(yangParent: YangContainerMetaData, yangModule: String, yangNamespace: String, yangName: String)
-    : YangAbstractParameter<Int, JsonNumber>(yangParent, yangModule, yangNamespace, yangName, JsonNumber::class.java) {
+    : YangNumberParameter<Int>(yangParent, yangModule, yangNamespace, yangName) {
 
-    override fun findValue(obj: JsonObject): Int? {
-        val jsonValue = findJsonValue(obj) ?: return 0
-        return jsonValue.intValueExact()
-    }
-
-    override fun getValue(obj: JsonObject): Int {
-        return getJsonValue(obj).intValueExact()
+    override fun convert(jsonValue: JsonNumber): Int {
+        return convertInteger(jsonValue, Int.MIN_VALUE, Int.MAX_VALUE)
     }
 
 }

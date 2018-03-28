@@ -57,6 +57,11 @@ val SchemaContext.allTypedDataSchemaNodes: Set<TypedDataSchemaNode>
     get() {
         val result = LinkedHashSet<TypedDataSchemaNode>()
         getTypedDataSchemaNodes(this, result)
+        for (grouping in groupings) {
+            for (childNode in grouping.childNodes) {
+                getTypedDataSchemaNodes(childNode, result)
+            }
+        }
         return result
     }
 

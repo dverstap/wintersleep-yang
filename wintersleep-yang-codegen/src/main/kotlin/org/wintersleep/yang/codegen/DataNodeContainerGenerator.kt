@@ -21,13 +21,9 @@ package org.wintersleep.yang.codegen
 
 import com.squareup.kotlinpoet.*
 import org.opendaylight.yangtools.yang.model.api.*
-import org.opendaylight.yangtools.yang.model.api.type.BooleanTypeDefinition
-import org.opendaylight.yangtools.yang.model.api.type.Int32TypeDefinition
-import org.opendaylight.yangtools.yang.model.api.type.Uint32TypeDefinition
-import org.opendaylight.yangtools.yang.model.api.type.Uint64TypeDefinition
+import org.opendaylight.yangtools.yang.model.api.type.*
 import org.wintersleep.yang.model.*
 import java.io.File
-import kotlin.reflect.KClass
 
 class DataNodeContainerGenerator(
         private val classNames: MutableSet<ClassName>,
@@ -140,10 +136,25 @@ class DataNodeContainerGenerator(
 
     private fun addLeafProperty(classBuilder: TypeSpec.Builder, childNode: DataSchemaNode) {
         val parameterType = determineYangParameterType(childNode)
+        var initializer = "$parameterType(this, %S, %S, %S)"
+
+        if (childNode is TypedDataSchemaNode && (childNode.type is EnumTypeDefinition)) { // || childNode.type.baseType is EnumTypeDefinition)) {
+            if (childNode.qName.localName == "transmission-system-capabilities") {
+                println(childNode.qName)
+                println(childNode.type.qName)
+                println(childNode)
+            }
+            // childNode.type.qName
+            // error: either namespace or tree based enums
+            //val enumClassName = childNode.qName.toNamespaceClassName()
+            //val enumClassName = childNode.type.qName.toNamespaceClassName()
+            val enumClassName = childNode.kClassName
+            initializer = "$parameterType(this, %S, %S, %S, $enumClassName::class.java)"
+        }
         classBuilder.addProperty(PropertySpec.builder(
                 childNode.path.lastComponent.localName.codeName(),
                 parameterType)
-                .initializer("${parameterType.simpleName}(this, %S, %S, %S)",
+                .initializer(initializer,
                         childNode.moduleName,
                         childNode.path.lastComponent.namespace,
                         childNode.path.lastComponent.localName)
@@ -151,20 +162,40 @@ class DataNodeContainerGenerator(
                 .build())
     }
 
-    private fun determineYangParameterType(childNode: DataSchemaNode): KClass<*> {
+    private fun determineYangParameterType(childNode: DataSchemaNode): TypeName {
         if (childNode is TypedDataSchemaNode) {
             // TODO visitor pattern
             if (childNode.type is BooleanTypeDefinition || childNode.type.baseType is BooleanTypeDefinition) {
-                return YangBooleanParameter::class
+                return YangBooleanParameter::class.asTypeName()
+            } else if (childNode.type is Int8TypeDefinition || childNode.type.baseType is Int8TypeDefinition) {
+                return YangByteParameter::class.asTypeName()
+            } else if (childNode.type is Uint8TypeDefinition || childNode.type.baseType is Uint8TypeDefinition) {
+                return YangUnsignedByteParameter::class.asTypeName()
+            } else if (childNode.type is Int16TypeDefinition || childNode.type.baseType is Int16TypeDefinition) {
+                return YangShortParameter::class.asTypeName()
+            } else if (childNode.type is Uint16TypeDefinition || childNode.type.baseType is Uint16TypeDefinition) {
+                return YangUnsignedShortParameter::class.asTypeName()
             } else if (childNode.type is Int32TypeDefinition || childNode.type.baseType is Int32TypeDefinition) {
-                return YangIntegerParameter::class
+                return YangIntegerParameter::class.asTypeName()
             } else if (childNode.type is Uint32TypeDefinition || childNode.type.baseType is Uint32TypeDefinition) {
-                return YangUnsignedIntegerParameter::class
+                return YangUnsignedIntegerParameter::class.asTypeName()
+            } else if (childNode.type is Int64TypeDefinition || childNode.type.baseType is Int64TypeDefinition) {
+                return YangLongParameter::class.asTypeName()
             } else if (childNode.type is Uint64TypeDefinition || childNode.type.baseType is Uint64TypeDefinition) {
-                return YangUnsignedLongParameter::class
+                return YangUnsignedLongParameter::class.asTypeName()
+            } else if (childNode.type is DecimalTypeDefinition || childNode.type.baseType is DecimalTypeDefinition) {
+                return YangDecimalParameter::class.asTypeName()
+            } else if (childNode.type is EnumTypeDefinition || childNode.type.baseType is EnumTypeDefinition) {
+//                val enumClassName = childNode.type.qName.toNamespaceClassName()
+                val enumClassName = childNode.kClassName
+                return ParameterizedTypeName.get(YangEnumParameter::class.asClassName(), enumClassName)
+            } else if (childNode.type is StringTypeDefinition || childNode.type.baseType is StringTypeDefinition) {
+                return YangStringParameter::class.asTypeName()
+            } else if (childNode.type is BinaryTypeDefinition || childNode.type.baseType is BinaryTypeDefinition) {
+                return YangBinaryParameter::class.asTypeName()
             }
         }
-        return YangJsonParameter::class
+        return YangJsonParameter::class.asTypeName()
     }
 
 //    private fun addContainerField(classBuilder: TypeSpec.Builder, childNode: DataSchemaNode): Boolean {

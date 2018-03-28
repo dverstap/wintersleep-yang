@@ -35,7 +35,6 @@ import org.yaml.snakeyaml.nodes.Node
 import org.yaml.snakeyaml.nodes.Tag
 import org.yaml.snakeyaml.representer.Representer
 import java.io.File
-import java.net.URI
 import java.util.*
 import kotlin.collections.LinkedHashMap
 
@@ -141,6 +140,14 @@ fun getEnumTypesMap(schemaContext: SchemaContext): Map<QName, EnumTypeDefinition
             result.addWithDuplicateCheck(typeDefinition.qName, typeDefinition, typeDefinition.path)
         }
     }
+    // does not make a difference:
+//    for (grouping in schemaContext.groupings) {
+//        for (typeDefinition in schemaContext.typeDefinitions) {
+//            if (typeDefinition is EnumTypeDefinition) {
+//                result.addWithDuplicateCheck(typeDefinition.qName, typeDefinition, typeDefinition.path)
+//            }
+//        }
+//    }
     result.putAll(getAnonymousEnumTypes(schemaContext))
     return result
 }
@@ -149,17 +156,35 @@ fun getEnumTypesMap(schemaContext: SchemaContext): Map<QName, EnumTypeDefinition
 fun getAnonymousEnumTypes(schemaContext: SchemaContext): MutableMap<QName, EnumTypeDefinition> {
     val result: MutableMap<QName, EnumTypeDefinition> = LinkedHashMap()
     val allTypedDataSchemaNodes = schemaContext.allTypedDataSchemaNodes
-    println(allTypedDataSchemaNodes.size)
+    println("#TypedDataSchemaNode: ${allTypedDataSchemaNodes.size}")
     for (dataSchemaNode in allTypedDataSchemaNodes) {
         //println("" + dataSchemaNode::class + ": " + dataSchemaNode.type::class)
         val type = dataSchemaNode.type
-        if (type is EnumTypeDefinition) {
-            //println("Adding " + dataSchemaNode.qName)
-            if (type.qName.localName == "enumeration") { // avoid duplicate generation of named enums
-                result.addWithDuplicateCheck(dataSchemaNode.qName, type, dataSchemaNode.path)
+        if (dataSchemaNode.qName.localName == "rein-inter-arrival-time") { //.startsWith("rein-")) {
+            println(dataSchemaNode)
+            if (dataSchemaNode.type.qName.localName != "enumeration") {
+                // TODO: study the difference between these two:
+                println(dataSchemaNode.type) // this is the path within the concrete data tree (= duplicate class names?)
+                println(dataSchemaNode.type.baseType)  // this is the path within the grouping (= unique class names?)
+                println(dataSchemaNode.type.baseType.baseType)
+                //throw IllegalArgumentException("rein-inter-arrival-time really is an anonymous enum type")
             }
         }
+        if (type is EnumTypeDefinition) { // || type.baseType is EnumTypeDefinition) {
+            //println("Adding " + dataSchemaNode.qName)
+            //if (type.qName.localName == "enumeration") { // avoid duplicate generation of named enums
+            result.addWithDuplicateCheck(dataSchemaNode.qName, type, dataSchemaNode.path)
+            //}
+        }
     }
+//    for (grouping in schemaContext.groupings) {
+//        for (typeDefinition in schemaContext.typeDefinitions) {
+//            if (typeDefinition is EnumTypeDefinition) {
+//                result.addWithDuplicateCheck(typeDefinition.qName, typeDefinition, typeDefinition.path)
+//            }
+//        }
+//    }
+
     return result
 //    if (dataSchemaNode is LeafSchemaNode) {
 //        val type = dataSchemaNode.type

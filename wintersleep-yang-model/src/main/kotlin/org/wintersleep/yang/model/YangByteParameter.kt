@@ -19,14 +19,14 @@
  */
 package org.wintersleep.yang.model
 
-import com.google.common.primitives.UnsignedLong
 import javax.json.JsonNumber
+import javax.json.JsonObject
 
-class YangUnsignedLongParameter(yangParent: YangContainerMetaData, yangModule: String, yangNamespace: String, yangName: String)
-    : YangNumberParameter<UnsignedLong>(yangParent, yangModule, yangNamespace, yangName) {
+class YangByteParameter(yangParent: YangContainerMetaData, yangModule: String, yangNamespace: String, yangName: String)
+    : YangNumberParameter<Byte>(yangParent, yangModule, yangNamespace, yangName) {
 
-    override fun convert(jsonValue: JsonNumber): UnsignedLong {
-        return UnsignedLong.valueOf(convertBigInteger(jsonValue, UnsignedLong.ZERO.bigIntegerValue(), UnsignedLong.MAX_VALUE.bigIntegerValue()))
+    override fun convert(jsonValue: JsonNumber): Byte {
+        return convertInteger(jsonValue, Byte.MIN_VALUE.toInt(), Byte.MAX_VALUE.toInt()).toByte()
     }
 
 }

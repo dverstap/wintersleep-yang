@@ -21,7 +21,7 @@ package org.wintersleep.yang.model
 
 class YangJsonPath(val nodeMetaDataList: List<YangNodeMetaData>) {
 
-    val stringList = nodeMetaDataList.map {it.jsonName}
+    val stringList = nodeMetaDataList.map { it.jsonName }
 
     override fun toString(): String {
         return stringList.joinToString("/")

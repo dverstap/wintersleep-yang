@@ -23,11 +23,11 @@ import javax.json.JsonException
 import javax.json.JsonObject
 import javax.json.JsonValue
 
-abstract class YangAbstractParameter<T, JsonResultType: JsonValue>(yangParent: YangContainerMetaData,
-                                                                   yangModule: String,
-                                                                   yangNamespace: String,
-                                                                   yangName: String,
-                                                                   val resultTypeClass: Class<JsonResultType>)
+abstract class YangAbstractParameter<T, out JsonResultType : JsonValue>(yangParent: YangContainerMetaData,
+                                                                        yangModule: String,
+                                                                        yangNamespace: String,
+                                                                        yangName: String,
+                                                                        private val jsonResultTypeClass: Class<JsonResultType>)
     : YangNodeMetaData(yangParent, yangModule, yangNamespace, yangName),
         YangParameter<T> {
 
@@ -42,7 +42,11 @@ abstract class YangAbstractParameter<T, JsonResultType: JsonValue>(yangParent: Y
             return null
         }
         if (path.size == 1) {
-            return child as JsonResultType
+            if (jsonResultTypeClass.isInstance(child)) {
+                return jsonResultTypeClass.cast(child)
+            } else {
+                throw IllegalArgumentException("$jsonFullPath: '$path' in '$obj' is not of the expected type $jsonResultTypeClass.")
+            }
         }
         return findJsonValue(child as JsonObject, path.subList(1, path.size))
     }
@@ -51,9 +55,13 @@ abstract class YangAbstractParameter<T, JsonResultType: JsonValue>(yangParent: Y
     internal fun getJsonValue(obj: JsonObject): JsonResultType {
         val value = findJsonValue(obj)
         if (value == null) {
-            throw IllegalArgumentException("Could not find $jsonPathFromRoot in $obj")
+            throw IllegalArgumentException("$jsonFullPath: Could not find '$jsonPathFromRoot' in '$obj'.")
         }
-        return resultTypeClass.cast(value)
+        return jsonResultTypeClass.cast(value)
+    }
+
+    override fun setValue(obj: JsonObject, value: T) {
+        TODO("not implemented")
     }
 
 }

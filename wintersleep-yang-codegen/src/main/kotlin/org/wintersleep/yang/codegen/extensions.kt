@@ -19,16 +19,21 @@
  */
 package org.wintersleep.yang.codegen
 
+import com.google.common.base.Preconditions
 import com.squareup.kotlinpoet.ClassName
 import org.opendaylight.yangtools.yang.common.QName
-import org.opendaylight.yangtools.yang.model.api.Module
 import org.opendaylight.yangtools.yang.model.api.SchemaNode
 import org.opendaylight.yangtools.yang.model.api.SchemaPath
+import org.opendaylight.yangtools.yang.model.api.TypedDataSchemaNode
+import org.opendaylight.yangtools.yang.model.api.type.EnumTypeDefinition
 import java.net.URI
 
 
 fun QName.toNamespaceClassName(suffix: String = ""): ClassName {
     val classShortName = this.localName.codeClassName() + suffix
+    if (classShortName == "Enumeration") {
+        throw IllegalArgumentException()
+    }
     val packageName = this.namespace.codePackageName()
     return ClassName(packageName, classShortName)
 }
@@ -144,4 +149,43 @@ val SchemaPath.last: String
 val SchemaNode.moduleName: String
     get() {
         return path.lastComponent.module.namespace.last
+    }
+
+val TypedDataSchemaNode.kClassName: ClassName
+    get() {
+        if (type is EnumTypeDefinition) {
+//            if (type.qName.localName == "enumeration") { // anonymous enum type
+//                return qName.toNamespaceClassName()
+//            } else {
+//                return type.qName.toNamespaceClassName()
+//            }
+            val enumType = type as EnumTypeDefinition
+            return enumType.enumNamespace.toNamespaceClassName()
+        } else {
+            throw IllegalArgumentException("$qName does not have an enum type.")
+        }
+    }
+
+//val EnumTypeDefinition.enumNamespace: QName
+//    get() {
+//        if (baseType == null) {
+//            Preconditions.checkState(qName.localName != "enumeration")
+//            return qName
+//        }
+//        if (baseType.qName.localName == "enumeration") {
+//            Preconditions.checkState(qName.localName != "enumeration")
+//            return qName
+//        } else {
+//            return baseType.qName
+//        }
+//    }
+
+val EnumTypeDefinition.enumNamespace: QName
+    get() {
+        if (qName.localName == "enumeration") {
+            Preconditions.checkState(path.parent.lastComponent.localName != "enumeration")
+            return path.parent.lastComponent
+        } else {
+            return qName
+        }
     }

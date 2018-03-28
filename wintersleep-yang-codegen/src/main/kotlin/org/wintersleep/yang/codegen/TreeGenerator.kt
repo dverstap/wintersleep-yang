@@ -21,10 +21,14 @@ package org.wintersleep.yang.codegen
 
 import org.opendaylight.yangtools.yang.model.api.DataNodeContainer
 import org.opendaylight.yangtools.yang.model.api.SchemaNode
+import org.opendaylight.yangtools.yang.model.api.TypedDataSchemaNode
+import org.opendaylight.yangtools.yang.model.api.type.EnumTypeDefinition
+import java.util.*
 
 class TreeGenerator(private val node: SchemaNode, private val indent: String) {
     fun generate(): Map<String, Any?> {
-        val result = LinkedHashMap<String, Any?>()
+        // not stable: val result = LinkedHashMap<String, Any?>()
+        val result = TreeMap<String, Any?>()
         if (node.path.lastComponent != null) {
             //println(indent + node.path.lastComponent.toString() + ": " + node.qName)
             //println(indent + node.path.lastComponent.localName + ": " + node.qName.localName)
@@ -39,7 +43,15 @@ class TreeGenerator(private val node: SchemaNode, private val indent: String) {
                 val childName = childNode.path.last
                 val childTree = TreeGenerator(childNode, "$indent  ").generate()
                 if (childTree.isEmpty()) {
-                    result[childName] = null // TODO put type definition and other stuff here
+                    if (childNode is TypedDataSchemaNode && childNode.type is EnumTypeDefinition) {
+//                        if (childNode.type.baseType == null) {
+//                            throw IllegalArgumentException("baseType is null for: ${childNode.qName}: ${childNode.type.qName}")
+//                        }
+                        result[childName] = "${childNode.type.qName}=${childNode.type.baseType?.qName}"
+                    } else {
+                        result[childName] = null // TODO put type definition and other stuff here
+                    }
+//                    result[childName] = null // TODO put type definition and other stuff here
                 } else {
                     result[childName] = childTree
                 }

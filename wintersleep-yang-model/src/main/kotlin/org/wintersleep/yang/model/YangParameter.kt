@@ -27,4 +27,6 @@ interface YangParameter<T> {
 
     fun getValue(obj: JsonObject): T
 
+    fun setValue(obj: JsonObject, value: T)
+
 }

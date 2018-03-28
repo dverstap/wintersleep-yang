@@ -21,21 +21,12 @@ package org.wintersleep.yang.model
 
 import com.google.common.primitives.UnsignedInteger
 import javax.json.JsonNumber
-import javax.json.JsonObject
 
 class YangUnsignedIntegerParameter(yangParent: YangContainerMetaData, yangModule: String, yangNamespace: String, yangName: String)
-    : YangAbstractParameter<UnsignedInteger, JsonNumber>(yangParent, yangModule, yangNamespace, yangName, JsonNumber::class.java) {
+    : YangNumberParameter<UnsignedInteger>(yangParent, yangModule, yangNamespace, yangName) {
 
-    override fun findValue(obj: JsonObject): UnsignedInteger? {
-        val jsonValue = findJsonValue(obj)
-        if (jsonValue != null) {
-            return UnsignedInteger.valueOf(jsonValue.longValueExact())
-        }
-        return null
-    }
-
-    override fun getValue(obj: JsonObject): UnsignedInteger {
-        return UnsignedInteger.valueOf(getJsonValue(obj).longValueExact())
+    override fun convert(jsonValue: JsonNumber): UnsignedInteger {
+        return UnsignedInteger.valueOf(convertLong(jsonValue, UnsignedInteger.ZERO.toLong(), UnsignedInteger.MAX_VALUE.toLong()))
     }
 
 }

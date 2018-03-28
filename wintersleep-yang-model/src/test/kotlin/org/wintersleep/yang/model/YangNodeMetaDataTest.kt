@@ -74,7 +74,7 @@ class YangNodeMetaDataTest {
     @Test
     fun testToString() {
         val nodeMetaData = make()
-        println(nodeMetaData)
+        // println(nodeMetaData)
         assertNull(nodeMetaData.yangParent)
         assertTrue(nodeMetaData.toString().contains("test-module"))
         assertTrue(nodeMetaData.toString().contains("test-namespace"))
