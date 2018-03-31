@@ -1,6 +1,6 @@
 /*-
  * #%L
- * org.wintersleep.yang:wintersleep-yang-yang2kt
+ * org.wintersleep.yang:wintersleep-yang-codegen
  * %%
  * Copyright (C) 2017 - 2018 Davy Verstappen
  * %%

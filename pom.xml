@@ -200,12 +200,12 @@
             </dependency>
             <dependency>
                 <groupId>org.wintersleep.yang</groupId>
-                <artifactId>wintersleep-yang-yang2kt</artifactId>
+                <artifactId>wintersleep-yang-codegen</artifactId>
                 <version>${project.version}</version>
             </dependency>
             <dependency>
                 <groupId>org.wintersleep.yang</groupId>
-                <artifactId>wintersleep-yang-yang2kt</artifactId>
+                <artifactId>wintersleep-yang-codegen</artifactId>
                 <classifier>tests</classifier>
                 <version>${project.version}</version>
             </dependency>
