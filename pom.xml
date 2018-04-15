@@ -108,6 +108,8 @@
                 <groupId>log4j</groupId>
                 <artifactId>log4j</artifactId>
                 <version>1.2.17</version>
+                <!-- Because we don't want this to be a transitive dependency for our users: -->
+                <scope>test</scope>
             </dependency>
 
             <dependency>
@@ -175,7 +177,8 @@
                 <groupId>org.slf4j</groupId>
                 <artifactId>slf4j-log4j12</artifactId>
                 <version>${org.slf4j.version}</version>
-                <scope>runtime</scope>
+                <!-- Because we don't want this to be a transitive dependency for our users: -->
+                <scope>test</scope>
             </dependency>
 
             <dependency>
