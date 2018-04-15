@@ -105,7 +105,7 @@ class DataNodeContainerGenerator(
                 classBuilder.addProperty(PropertySpec.builder(
                         uniqueFieldName(childNode, duplicateFieldNames),
                         childClassName)
-                        .initializer(childClassName.canonicalName + "(this)")
+                        .initializer("%T(this)", childClassName)
                         .addAnnotation(JvmField::class)
                         .build())
             } else {
@@ -136,7 +136,7 @@ class DataNodeContainerGenerator(
 
     private fun addLeafProperty(classBuilder: TypeSpec.Builder, childNode: DataSchemaNode) {
         val parameterType = determineYangParameterType(childNode)
-        var initializer = "$parameterType(this, %S, %S, %S)"
+        var initializer = "%T(this, %S, %S, %S)"
 
         if (childNode is TypedDataSchemaNode && (childNode.type is EnumTypeDefinition)) { // || childNode.type.baseType is EnumTypeDefinition)) {
             if (childNode.qName.localName == "transmission-system-capabilities") {
@@ -149,12 +149,13 @@ class DataNodeContainerGenerator(
             //val enumClassName = childNode.qName.toNamespaceClassName()
             //val enumClassName = childNode.type.qName.toNamespaceClassName()
             val enumClassName = childNode.kClassName
-            initializer = "$parameterType(this, %S, %S, %S, $enumClassName::class.java)"
+            initializer = "%T(this, %S, %S, %S, $enumClassName::class.java)"
         }
         classBuilder.addProperty(PropertySpec.builder(
                 childNode.path.lastComponent.localName.codeName(),
                 parameterType)
                 .initializer(initializer,
+                        parameterType,
                         childNode.moduleName,
                         childNode.path.lastComponent.namespace,
                         childNode.path.lastComponent.localName)
@@ -205,7 +206,7 @@ class DataNodeContainerGenerator(
 //                classBuilder.addProperty(PropertySpec.builder(
 //                        childNode.path.lastComponent.localName.codeName(),
 //                        className)
-//                        .initializer(className.canonicalName + "()")
+//                        .initializer("%T()", className)
 //                        .addAnnotation(JvmField::class)
 //                        .build())
 //                return true
