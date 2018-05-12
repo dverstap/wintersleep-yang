@@ -19,20 +19,9 @@
  */
 package org.wintersleep.yang.model
 
-import javax.json.JsonObject
-import javax.json.JsonValue
-
-open class YangJsonParameter(yangParent: YangContainerMetaData,
+// TODO Implement real support for bits, using a generated enum class identifying the bits.
+class YangBitsParameter(yangParent: YangContainerMetaData,
                         yangModule: String,
                         yangNamespace: String,
                         yangName: String)
-    : YangAbstractParameter<JsonValue, JsonValue>(yangParent, yangModule, yangNamespace, yangName, JsonValue::class.java) {
-
-    override fun findValue(obj: JsonObject): JsonValue? {
-        return findJsonValue(obj)
-    }
-
-    override fun getValue(obj: JsonObject): JsonValue {
-        return getJsonValue(obj)
-    }
-}
+    : YangJsonParameter(yangParent, yangModule, yangNamespace, yangName)

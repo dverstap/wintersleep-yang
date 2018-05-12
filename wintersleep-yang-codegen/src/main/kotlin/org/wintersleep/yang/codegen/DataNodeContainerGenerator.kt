@@ -75,7 +75,7 @@ class DataNodeContainerGenerator(
                     .build()
             file.writeTo(outputDir)
         } else {
-            throw IllegalArgumentException("Skipping generateClass because of no ClassName: " + schemaNode)
+            throw IllegalArgumentException("Skipping generateClass because of no ClassName: $schemaNode")
         }
     }
 
@@ -194,8 +194,27 @@ class DataNodeContainerGenerator(
                 return YangStringParameter::class.asTypeName()
             } else if (childNode.type is BinaryTypeDefinition || childNode.type.baseType is BinaryTypeDefinition) {
                 return YangBinaryParameter::class.asTypeName()
+            } else if (childNode.type is UnionTypeDefinition || childNode.type.baseType is UnionTypeDefinition) {
+                return YangUnionParameter::class.asTypeName()
+            } else if (childNode.type is BitsTypeDefinition || childNode.type.baseType is BitsTypeDefinition) {
+                return YangBitsParameter::class.asTypeName()
+            } else if (childNode.type is LeafrefTypeDefinition || childNode.type.baseType is LeafrefTypeDefinition) {
+                return YangLeafRefParameter::class.asTypeName()
+            } else if (childNode.type is IdentityTypeDefinition || childNode.type.baseType is IdentityTypeDefinition) {
+                return YangIdentityParameter::class.asTypeName()
+            } else if (childNode.type is IdentityrefTypeDefinition || childNode.type.baseType is IdentityrefTypeDefinition) {
+                return YangIdentityRefParameter::class.asTypeName()
+            } else if (childNode.type is InstanceIdentifierTypeDefinition || childNode.type.baseType is InstanceIdentifierTypeDefinition) {
+                return YangInstanceIdentifierParameter::class.asTypeName()
+            } else if (childNode.type is EmptyTypeDefinition || childNode.type.baseType is EmptyTypeDefinition) {
+                return YangEmptyParameter::class.asTypeName()
+            } else if (childNode.type is UnknownTypeDefinition || childNode.type.baseType is UnknownTypeDefinition) {
+                return YangUnknownParameter::class.asTypeName()
+            } else {
+                throw IllegalArgumentException("Unknown type: ${childNode.type}")
             }
         }
+        println(childNode)
         return YangJsonParameter::class.asTypeName()
     }
 

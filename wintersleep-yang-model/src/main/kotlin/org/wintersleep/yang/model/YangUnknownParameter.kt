@@ -19,20 +19,8 @@
  */
 package org.wintersleep.yang.model
 
-import javax.json.JsonObject
-import javax.json.JsonValue
-
-open class YangJsonParameter(yangParent: YangContainerMetaData,
-                        yangModule: String,
-                        yangNamespace: String,
-                        yangName: String)
-    : YangAbstractParameter<JsonValue, JsonValue>(yangParent, yangModule, yangNamespace, yangName, JsonValue::class.java) {
-
-    override fun findValue(obj: JsonObject): JsonValue? {
-        return findJsonValue(obj)
-    }
-
-    override fun getValue(obj: JsonObject): JsonValue {
-        return getJsonValue(obj)
-    }
-}
+class YangUnknownParameter(yangParent: YangContainerMetaData,
+                           yangModule: String,
+                           yangNamespace: String,
+                           yangName: String)
+    : YangJsonParameter(yangParent, yangModule, yangNamespace, yangName)
