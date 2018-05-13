@@ -21,9 +21,7 @@ package org.wintersleep.yang.codegen
 
 import com.squareup.kotlinpoet.ClassName
 import org.opendaylight.yangtools.yang.common.QName
-import org.opendaylight.yangtools.yang.model.api.DataNodeContainer
-import org.opendaylight.yangtools.yang.model.api.SchemaContext
-import org.opendaylight.yangtools.yang.model.api.SchemaPath
+import org.opendaylight.yangtools.yang.model.api.*
 import org.opendaylight.yangtools.yang.model.api.type.EnumTypeDefinition
 import org.opendaylight.yangtools.yang.test.util.YangParserTestUtils.parseYangFiles
 import org.wintersleep.yang.schema.YangTools.findMyModuleTopDir
@@ -59,8 +57,12 @@ fun main(args: Array<String>) {
 
     val classNames = HashSet<ClassName>()
     for (childNode in schemaContext.childNodes) {
-        if (childNode is DataNodeContainer) {
+        if (childNode is DataNodeContainer) { // CaseSchemaNode is a DataNodeContainer
             DataNodeContainerGenerator(classNames, childNode, outputDir).generate()
+        } else if (childNode is ChoiceSchemaNode) { // but ChoiceSchemaNode is not
+            for (case in childNode.cases) {
+                DataNodeContainerGenerator(classNames, case.value, outputDir)
+            }
         }
     }
 

@@ -72,6 +72,10 @@ fun getTypedDataSchemaNodes(dataSchemaNode: DataSchemaNode, result: MutableSet<T
         for (childNode in dataSchemaNode.childNodes) {
             getTypedDataSchemaNodes(childNode, result)
         }
+    } else if (dataSchemaNode is ChoiceSchemaNode) {
+        for (case in dataSchemaNode.cases) {
+            getTypedDataSchemaNodes(case.value, result)
+        }
     }
 }
 

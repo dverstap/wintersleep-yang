@@ -37,47 +37,47 @@ class DataNodeContainerGenerator(
         for (childNode in schemaNode.childNodes) {
             if (childNode is DataNodeContainer) {
                 DataNodeContainerGenerator(classNames, childNode, outputDir).generate()
+            } else if (childNode is ChoiceSchemaNode) {
+                for (case in childNode.cases) {
+                    DataNodeContainerGenerator(classNames, case.value, outputDir).generate()
+                }
             }
         }
     }
 
     private fun generateClass() {
         val className = makeClassName(schemaNode)
-        if (className != null) {
-            val sn = schemaNode as SchemaNode
-            if (className in classNames) {
-                //className = ClassName(className.packageName(), className.simpleName() + "2")
-                throw IllegalArgumentException("Duplicated class $className for $schemaNode")
-            } else {
-                classNames.add(className)
-            }
-            val classBuilder = TypeSpec.classBuilder(className)
-                    .superclass(YangContainerMetaData::class)
-                    .primaryConstructor(FunSpec.constructorBuilder()
-                            .addParameter(ParameterSpec.builder("yangParent",
-                                    YangContainerMetaData::class.asTypeName().asNullable())
-                                    .defaultValue("null")
-                                    .build())
-                            .build())
-                    .addSuperclassConstructorParameter("yangParent")
-                    .addSuperclassConstructorParameter(quote(sn.moduleName))
-                    .addSuperclassConstructorParameter(quote(sn.path.lastComponent.namespace))
-                    .addSuperclassConstructorParameter(quote(sn.path.lastComponent.localName))
-            val duplicateFieldNames = makeDuplicateFieldNamesSet()
+        val sn = schemaNode as SchemaNode
+        if (className in classNames) {
+            //className = ClassName(className.packageName(), className.simpleName() + "2")
+            throw IllegalArgumentException("Duplicated class $className for $schemaNode")
+        } else {
+            classNames.add(className)
+        }
+        val classBuilder = TypeSpec.classBuilder(className)
+                .superclass(YangContainerMetaData::class)
+                .primaryConstructor(FunSpec.constructorBuilder()
+                        .addParameter(ParameterSpec.builder("yangParent",
+                                YangContainerMetaData::class.asTypeName().asNullable())
+                                .defaultValue("null")
+                                .build())
+                        .build())
+                .addSuperclassConstructorParameter("yangParent")
+                .addSuperclassConstructorParameter(quote(sn.moduleName))
+                .addSuperclassConstructorParameter(quote(sn.path.lastComponent.namespace))
+                .addSuperclassConstructorParameter(quote(sn.path.lastComponent.localName))
+        val duplicateFieldNames = makeDuplicateFieldNamesSet()
 //            if (duplicateFieldNames.isNotEmpty()) {
 //                println(duplicateFieldNames)
 //            }
-            for (childNode in schemaNode.childNodes) {
-                addProperty(classBuilder, duplicateFieldNames, childNode)
-            }
-            //println("Writing $className")
-            val file = FileSpec.builder(className.packageName(), className.simpleName())
-                    .addType(classBuilder.build())
-                    .build()
-            file.writeTo(outputDir)
-        } else {
-            throw IllegalArgumentException("Skipping generateClass because of no ClassName: $schemaNode")
+        for (childNode in schemaNode.childNodes) {
+            addProperty(classBuilder, duplicateFieldNames, childNode)
         }
+        //println("Writing $className")
+        val file = FileSpec.builder(className.packageName(), className.simpleName())
+                .addType(classBuilder.build())
+                .build()
+        file.writeTo(outputDir)
     }
 
     private fun quote(arg: Any) = "\"$arg\""
@@ -97,25 +97,24 @@ class DataNodeContainerGenerator(
     }
 
     private fun addProperty(classBuilder: TypeSpec.Builder, duplicateFieldNames: Set<String>, childNode: DataSchemaNode) {
-//        if (!addContainerField(classBuilder, childNode)) {
-//            addLeafProperty(classBuilder, childNode)
-//        }
-        if (childNode is DataNodeContainer) {
-            val childClassName = makeClassName(childNode)
-            if (childClassName != null) {
+        when (childNode) {
+            is TypedDataSchemaNode -> // leaf or leaf-list
+                addLeafProperty(classBuilder, childNode)
+            is DataNodeContainer -> {
+                val childClassName = makeClassName(childNode)
                 classBuilder.addProperty(PropertySpec.builder(
                         uniqueFieldName(childNode, duplicateFieldNames),
                         childClassName)
                         .initializer("%T(this)", childClassName)
                         .addAnnotation(JvmField::class)
                         .build())
-            } else {
-                //println("Skipping addProperty because of no class name: $childNode")
-                addLeafProperty(classBuilder, childNode)
             }
-        } else {
-            //println("Skipping addProperty because it is not a DataNodeContainer: $childNode")
-            addLeafProperty(classBuilder, childNode)
+            is ChoiceSchemaNode -> for (case in childNode.cases) {
+                for (grandChildNode in case.value.childNodes) {
+                    addProperty(classBuilder, duplicateFieldNames, grandChildNode)
+                }
+            }
+            else -> TODO("Unsupported: $childNode")
         }
     }
 
@@ -135,11 +134,11 @@ class DataNodeContainerGenerator(
         return fieldName
     }
 
-    private fun addLeafProperty(classBuilder: TypeSpec.Builder, childNode: DataSchemaNode) {
+    private fun addLeafProperty(classBuilder: TypeSpec.Builder, childNode: TypedDataSchemaNode) {
         val parameterType = determineYangParameterType(childNode)
         var initializer = "%T(this, %S, %S, %S)"
 
-        if (childNode is TypedDataSchemaNode && (childNode.type is EnumTypeDefinition)) { // || childNode.type.baseType is EnumTypeDefinition)) {
+        if (childNode.type is EnumTypeDefinition) { // || childNode.type.baseType is EnumTypeDefinition)) {
             if (childNode.qName.localName == "transmission-system-capabilities") {
                 println(childNode.qName)
                 println(childNode.type.qName)
@@ -164,61 +163,56 @@ class DataNodeContainerGenerator(
                 .build())
     }
 
-    private fun determineYangParameterType(childNode: DataSchemaNode): TypeName {
-        if (childNode is TypedDataSchemaNode) {
-            // TODO visitor pattern
-            if (childNode.type is BooleanTypeDefinition || childNode.type.baseType is BooleanTypeDefinition) {
-                return leafOrList(childNode, YangBooleanParameter::class, YangBooleanListParameter::class)
-            } else if (childNode.type is Int8TypeDefinition || childNode.type.baseType is Int8TypeDefinition) {
-                return leafOrList(childNode, YangByteParameter::class, YangByteListParameter::class)
-            } else if (childNode.type is Uint8TypeDefinition || childNode.type.baseType is Uint8TypeDefinition) {
-                return leafOrList(childNode, YangUnsignedByteParameter::class, YangUnsignedByteListParameter::class)
-            } else if (childNode.type is Int16TypeDefinition || childNode.type.baseType is Int16TypeDefinition) {
-                return leafOrList(childNode, YangShortParameter::class, YangShortListParameter::class)
-            } else if (childNode.type is Uint16TypeDefinition || childNode.type.baseType is Uint16TypeDefinition) {
-                return leafOrList(childNode, YangUnsignedShortParameter::class, YangUnsignedShortListParameter::class)
-            } else if (childNode.type is Int32TypeDefinition || childNode.type.baseType is Int32TypeDefinition) {
-                return leafOrList(childNode, YangIntegerParameter::class, YangIntegerListParameter::class)
-            } else if (childNode.type is Uint32TypeDefinition || childNode.type.baseType is Uint32TypeDefinition) {
-                return leafOrList(childNode, YangUnsignedIntegerParameter::class, YangUnsignedIntegerListParameter::class)
-            } else if (childNode.type is Int64TypeDefinition || childNode.type.baseType is Int64TypeDefinition) {
-                return leafOrList(childNode, YangLongParameter::class, YangLongListParameter::class)
-            } else if (childNode.type is Uint64TypeDefinition || childNode.type.baseType is Uint64TypeDefinition) {
-                return leafOrList(childNode, YangUnsignedLongParameter::class, YangUnsignedLongListParameter::class)
-            } else if (childNode.type is DecimalTypeDefinition || childNode.type.baseType is DecimalTypeDefinition) {
-                return leafOrList(childNode, YangDecimalParameter::class, YangDecimalListParameter::class)
-            } else if (childNode.type is EnumTypeDefinition || childNode.type.baseType is EnumTypeDefinition) {
-//                val enumClassName = childNode.type.qName.toNamespaceClassName()
-                val enumClassName = childNode.kClassName
-                return ParameterizedTypeName.get(
-                        leafOrList(childNode, YangEnumParameter::class, YangEnumListParameter::class),
-                        enumClassName)
-            } else if (childNode.type is StringTypeDefinition || childNode.type.baseType is StringTypeDefinition) {
-                return leafOrList(childNode, YangStringParameter::class, YangStringListParameter::class)
-            } else if (childNode.type is BinaryTypeDefinition || childNode.type.baseType is BinaryTypeDefinition) {
-                return leafOrList(childNode, YangBinaryParameter::class, YangBinaryListParameter::class)
-            } else if (childNode.type is UnionTypeDefinition || childNode.type.baseType is UnionTypeDefinition) {
-                return leafOrList(childNode, YangUnionParameter::class, YangUnionListParameter::class)
-            } else if (childNode.type is BitsTypeDefinition || childNode.type.baseType is BitsTypeDefinition) {
-                return leafOrList(childNode, YangBitsParameter::class, YangBitsListParameter::class)
-            } else if (childNode.type is LeafrefTypeDefinition || childNode.type.baseType is LeafrefTypeDefinition) {
-                return leafOrList(childNode, YangLeafRefParameter::class, YangLeafRefListParameter::class)
-            } else if (childNode.type is IdentityTypeDefinition || childNode.type.baseType is IdentityTypeDefinition) {
-                return leafOrList(childNode, YangIdentityParameter::class, YangIdentityListParameter::class)
-            } else if (childNode.type is IdentityrefTypeDefinition || childNode.type.baseType is IdentityrefTypeDefinition) {
-                return leafOrList(childNode, YangIdentityRefParameter::class, YangIdentityRefListParameter::class)
-            } else if (childNode.type is InstanceIdentifierTypeDefinition || childNode.type.baseType is InstanceIdentifierTypeDefinition) {
-                return leafOrList(childNode, YangInstanceIdentifierParameter::class, YangInstanceIdentifierListParameter::class)
-            } else if (childNode.type is EmptyTypeDefinition || childNode.type.baseType is EmptyTypeDefinition) {
-                return leafOrList(childNode, YangEmptyParameter::class, YangEmptyListParameter::class)
-            } else if (childNode.type is UnknownTypeDefinition || childNode.type.baseType is UnknownTypeDefinition) {
-                return leafOrList(childNode, YangUnknownParameter::class, YangUnknownListParameter::class)
-            } else {
-                throw IllegalArgumentException("Unknown type: ${childNode.type}")
-            }
+    private fun determineYangParameterType(childNode: TypedDataSchemaNode): TypeName {
+        // TODO visitor pattern
+        if (childNode.type is BooleanTypeDefinition || childNode.type.baseType is BooleanTypeDefinition) {
+            return leafOrList(childNode, YangBooleanParameter::class, YangBooleanListParameter::class)
+        } else if (childNode.type is Int8TypeDefinition || childNode.type.baseType is Int8TypeDefinition) {
+            return leafOrList(childNode, YangByteParameter::class, YangByteListParameter::class)
+        } else if (childNode.type is Uint8TypeDefinition || childNode.type.baseType is Uint8TypeDefinition) {
+            return leafOrList(childNode, YangUnsignedByteParameter::class, YangUnsignedByteListParameter::class)
+        } else if (childNode.type is Int16TypeDefinition || childNode.type.baseType is Int16TypeDefinition) {
+            return leafOrList(childNode, YangShortParameter::class, YangShortListParameter::class)
+        } else if (childNode.type is Uint16TypeDefinition || childNode.type.baseType is Uint16TypeDefinition) {
+            return leafOrList(childNode, YangUnsignedShortParameter::class, YangUnsignedShortListParameter::class)
+        } else if (childNode.type is Int32TypeDefinition || childNode.type.baseType is Int32TypeDefinition) {
+            return leafOrList(childNode, YangIntegerParameter::class, YangIntegerListParameter::class)
+        } else if (childNode.type is Uint32TypeDefinition || childNode.type.baseType is Uint32TypeDefinition) {
+            return leafOrList(childNode, YangUnsignedIntegerParameter::class, YangUnsignedIntegerListParameter::class)
+        } else if (childNode.type is Int64TypeDefinition || childNode.type.baseType is Int64TypeDefinition) {
+            return leafOrList(childNode, YangLongParameter::class, YangLongListParameter::class)
+        } else if (childNode.type is Uint64TypeDefinition || childNode.type.baseType is Uint64TypeDefinition) {
+            return leafOrList(childNode, YangUnsignedLongParameter::class, YangUnsignedLongListParameter::class)
+        } else if (childNode.type is DecimalTypeDefinition || childNode.type.baseType is DecimalTypeDefinition) {
+            return leafOrList(childNode, YangDecimalParameter::class, YangDecimalListParameter::class)
+        } else if (childNode.type is EnumTypeDefinition || childNode.type.baseType is EnumTypeDefinition) {
+            val enumClassName = childNode.kClassName
+            return ParameterizedTypeName.get(
+                    leafOrList(childNode, YangEnumParameter::class, YangEnumListParameter::class),
+                    enumClassName)
+        } else if (childNode.type is StringTypeDefinition || childNode.type.baseType is StringTypeDefinition) {
+            return leafOrList(childNode, YangStringParameter::class, YangStringListParameter::class)
+        } else if (childNode.type is BinaryTypeDefinition || childNode.type.baseType is BinaryTypeDefinition) {
+            return leafOrList(childNode, YangBinaryParameter::class, YangBinaryListParameter::class)
+        } else if (childNode.type is UnionTypeDefinition || childNode.type.baseType is UnionTypeDefinition) {
+            return leafOrList(childNode, YangUnionParameter::class, YangUnionListParameter::class)
+        } else if (childNode.type is BitsTypeDefinition || childNode.type.baseType is BitsTypeDefinition) {
+            return leafOrList(childNode, YangBitsParameter::class, YangBitsListParameter::class)
+        } else if (childNode.type is LeafrefTypeDefinition || childNode.type.baseType is LeafrefTypeDefinition) {
+            return leafOrList(childNode, YangLeafRefParameter::class, YangLeafRefListParameter::class)
+        } else if (childNode.type is IdentityTypeDefinition || childNode.type.baseType is IdentityTypeDefinition) {
+            return leafOrList(childNode, YangIdentityParameter::class, YangIdentityListParameter::class)
+        } else if (childNode.type is IdentityrefTypeDefinition || childNode.type.baseType is IdentityrefTypeDefinition) {
+            return leafOrList(childNode, YangIdentityRefParameter::class, YangIdentityRefListParameter::class)
+        } else if (childNode.type is InstanceIdentifierTypeDefinition || childNode.type.baseType is InstanceIdentifierTypeDefinition) {
+            return leafOrList(childNode, YangInstanceIdentifierParameter::class, YangInstanceIdentifierListParameter::class)
+        } else if (childNode.type is EmptyTypeDefinition || childNode.type.baseType is EmptyTypeDefinition) {
+            return leafOrList(childNode, YangEmptyParameter::class, YangEmptyListParameter::class)
+        } else if (childNode.type is UnknownTypeDefinition || childNode.type.baseType is UnknownTypeDefinition) {
+            return leafOrList(childNode, YangUnknownParameter::class, YangUnknownListParameter::class)
+        } else {
+            throw IllegalArgumentException("Unknown type: ${childNode.type}")
         }
-        println(childNode)
-        return YangJsonLeafParameter::class.asTypeName()
     }
 
     // TODO stricter contraints on KClass type parameters:
@@ -247,7 +241,7 @@ class DataNodeContainerGenerator(
 //        return false
 //    }
 
-    private fun makeClassName(container: DataNodeContainer): ClassName? {
+    private fun makeClassName(container: DataNodeContainer): ClassName {
         // Using the namespace for packages generates duplicated classes,
         // which have and need to have different content. See for instance
         // InterfaceMetaData (under interfaces/interfaces-state).
@@ -256,12 +250,10 @@ class DataNodeContainerGenerator(
             container.path.toTreeClassName("MetaData")
         } else if (container is ListSchemaNode) {
             container.path.toTreeClassName("MetaData")
-        } else if (container is GroupingDefinition) {
-//            container.path.lastComponent.toClassName("Group")
-            throw IllegalArgumentException()
+        } else if (container is CaseSchemaNode) {
+            container.path.toTreeClassName("MetaData")
         } else {
-            // TODO more types?
-            null
+            TODO("Type support needed for: $container")
         }
     }
 }
