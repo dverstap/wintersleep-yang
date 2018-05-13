@@ -24,6 +24,7 @@ import org.opendaylight.yangtools.yang.model.api.*
 import org.opendaylight.yangtools.yang.model.api.type.*
 import org.wintersleep.yang.model.*
 import java.io.File
+import kotlin.reflect.KClass
 
 class DataNodeContainerGenerator(
         private val classNames: MutableSet<ClassName>,
@@ -167,55 +168,67 @@ class DataNodeContainerGenerator(
         if (childNode is TypedDataSchemaNode) {
             // TODO visitor pattern
             if (childNode.type is BooleanTypeDefinition || childNode.type.baseType is BooleanTypeDefinition) {
-                return YangBooleanParameter::class.asTypeName()
+                return leafOrList(childNode, YangBooleanParameter::class, YangBooleanListParameter::class)
             } else if (childNode.type is Int8TypeDefinition || childNode.type.baseType is Int8TypeDefinition) {
-                return YangByteParameter::class.asTypeName()
+                return leafOrList(childNode, YangByteParameter::class, YangByteListParameter::class)
             } else if (childNode.type is Uint8TypeDefinition || childNode.type.baseType is Uint8TypeDefinition) {
-                return YangUnsignedByteParameter::class.asTypeName()
+                return leafOrList(childNode, YangUnsignedByteParameter::class, YangUnsignedByteListParameter::class)
             } else if (childNode.type is Int16TypeDefinition || childNode.type.baseType is Int16TypeDefinition) {
-                return YangShortParameter::class.asTypeName()
+                return leafOrList(childNode, YangShortParameter::class, YangShortListParameter::class)
             } else if (childNode.type is Uint16TypeDefinition || childNode.type.baseType is Uint16TypeDefinition) {
-                return YangUnsignedShortParameter::class.asTypeName()
+                return leafOrList(childNode, YangUnsignedShortParameter::class, YangUnsignedShortListParameter::class)
             } else if (childNode.type is Int32TypeDefinition || childNode.type.baseType is Int32TypeDefinition) {
-                return YangIntegerParameter::class.asTypeName()
+                return leafOrList(childNode, YangIntegerParameter::class, YangIntegerListParameter::class)
             } else if (childNode.type is Uint32TypeDefinition || childNode.type.baseType is Uint32TypeDefinition) {
-                return YangUnsignedIntegerParameter::class.asTypeName()
+                return leafOrList(childNode, YangUnsignedIntegerParameter::class, YangUnsignedIntegerListParameter::class)
             } else if (childNode.type is Int64TypeDefinition || childNode.type.baseType is Int64TypeDefinition) {
-                return YangLongParameter::class.asTypeName()
+                return leafOrList(childNode, YangLongParameter::class, YangLongListParameter::class)
             } else if (childNode.type is Uint64TypeDefinition || childNode.type.baseType is Uint64TypeDefinition) {
-                return YangUnsignedLongParameter::class.asTypeName()
+                return leafOrList(childNode, YangUnsignedLongParameter::class, YangUnsignedLongListParameter::class)
             } else if (childNode.type is DecimalTypeDefinition || childNode.type.baseType is DecimalTypeDefinition) {
-                return YangDecimalParameter::class.asTypeName()
+                return leafOrList(childNode, YangDecimalParameter::class, YangDecimalListParameter::class)
             } else if (childNode.type is EnumTypeDefinition || childNode.type.baseType is EnumTypeDefinition) {
 //                val enumClassName = childNode.type.qName.toNamespaceClassName()
                 val enumClassName = childNode.kClassName
-                return ParameterizedTypeName.get(YangEnumParameter::class.asClassName(), enumClassName)
+                return ParameterizedTypeName.get(
+                        leafOrList(childNode, YangEnumParameter::class, YangEnumListParameter::class),
+                        enumClassName)
             } else if (childNode.type is StringTypeDefinition || childNode.type.baseType is StringTypeDefinition) {
-                return YangStringParameter::class.asTypeName()
+                return leafOrList(childNode, YangStringParameter::class, YangStringListParameter::class)
             } else if (childNode.type is BinaryTypeDefinition || childNode.type.baseType is BinaryTypeDefinition) {
-                return YangBinaryParameter::class.asTypeName()
+                return leafOrList(childNode, YangBinaryParameter::class, YangBinaryListParameter::class)
             } else if (childNode.type is UnionTypeDefinition || childNode.type.baseType is UnionTypeDefinition) {
-                return YangUnionParameter::class.asTypeName()
+                return leafOrList(childNode, YangUnionParameter::class, YangUnionListParameter::class)
             } else if (childNode.type is BitsTypeDefinition || childNode.type.baseType is BitsTypeDefinition) {
-                return YangBitsParameter::class.asTypeName()
+                return leafOrList(childNode, YangBitsParameter::class, YangBitsListParameter::class)
             } else if (childNode.type is LeafrefTypeDefinition || childNode.type.baseType is LeafrefTypeDefinition) {
-                return YangLeafRefParameter::class.asTypeName()
+                return leafOrList(childNode, YangLeafRefParameter::class, YangLeafRefListParameter::class)
             } else if (childNode.type is IdentityTypeDefinition || childNode.type.baseType is IdentityTypeDefinition) {
-                return YangIdentityParameter::class.asTypeName()
+                return leafOrList(childNode, YangIdentityParameter::class, YangIdentityListParameter::class)
             } else if (childNode.type is IdentityrefTypeDefinition || childNode.type.baseType is IdentityrefTypeDefinition) {
-                return YangIdentityRefParameter::class.asTypeName()
+                return leafOrList(childNode, YangIdentityRefParameter::class, YangIdentityRefListParameter::class)
             } else if (childNode.type is InstanceIdentifierTypeDefinition || childNode.type.baseType is InstanceIdentifierTypeDefinition) {
-                return YangInstanceIdentifierParameter::class.asTypeName()
+                return leafOrList(childNode, YangInstanceIdentifierParameter::class, YangInstanceIdentifierListParameter::class)
             } else if (childNode.type is EmptyTypeDefinition || childNode.type.baseType is EmptyTypeDefinition) {
-                return YangEmptyParameter::class.asTypeName()
+                return leafOrList(childNode, YangEmptyParameter::class, YangEmptyListParameter::class)
             } else if (childNode.type is UnknownTypeDefinition || childNode.type.baseType is UnknownTypeDefinition) {
-                return YangUnknownParameter::class.asTypeName()
+                return leafOrList(childNode, YangUnknownParameter::class, YangUnknownListParameter::class)
             } else {
                 throw IllegalArgumentException("Unknown type: ${childNode.type}")
             }
         }
         println(childNode)
-        return YangJsonParameter::class.asTypeName()
+        return YangJsonLeafParameter::class.asTypeName()
+    }
+
+    // TODO stricter contraints on KClass type parameters:
+    private fun leafOrList(node: TypedDataSchemaNode, leafClass: KClass<*>, leafListClass: KClass<*>): ClassName {
+        if (node is LeafSchemaNode) {
+            return leafClass.asClassName()
+        } else if (node is LeafListSchemaNode) {
+            return leafListClass.asClassName()
+        }
+        throw IllegalArgumentException("Cannot handle type of : $node")
     }
 
 //    private fun addContainerField(classBuilder: TypeSpec.Builder, childNode: DataSchemaNode): Boolean {

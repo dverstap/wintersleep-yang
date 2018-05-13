@@ -19,9 +19,4 @@
  */
 package org.wintersleep.yang.model
 
-// TODO Implement real support for bits, using a generated enum class identifying the bits.
-class YangBitsParameter(yangParent: YangContainerMetaData,
-                        yangModule: String,
-                        yangNamespace: String,
-                        yangName: String)
-    : YangJsonParameter(yangParent, yangModule, yangNamespace, yangName)
+interface YangLeafListParameter<T> : YangParameter<List<T>>
