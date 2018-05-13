@@ -53,8 +53,6 @@
     </dependencies>
 
     <build>
-        <!-- Needed for dokka-maven-plugin -->
-        <sourceDirectory>${project.build.directory}/generated-sources/yang</sourceDirectory>
         <plugins>
             <plugin>
                 <groupId>org.codehaus.mojo</groupId>
