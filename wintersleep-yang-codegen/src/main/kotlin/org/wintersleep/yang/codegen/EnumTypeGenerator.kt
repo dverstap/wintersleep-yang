@@ -33,21 +33,31 @@ internal class EnumTypeGenerator(
 
     fun generate(): ClassName {
         val className = qName.toNamespaceClassName()
+        val constructorFunSpec = FunSpec.constructorBuilder()
+                .addParameter("yangName", String::class)
+                .addParameter("yangValue", Int::class)
+                .build()
         val enumBuilder = TypeSpec.enumBuilder(className)
                 .addSuperinterface(YangEnum::class)
-                .primaryConstructor(FunSpec.constructorBuilder()
-                        .addParameter(ParameterSpec.builder("val yangName", String::class)
-                                .addModifiers(KModifier.OVERRIDE)
-                                .build())
-                        .addParameter(ParameterSpec.builder("val yangValue", Int::class)
-                                .addModifiers(KModifier.OVERRIDE)
-                                .build())
+                .primaryConstructor(constructorFunSpec)
+                .addProperty(PropertySpec.builder("yangName", String::class)
+                        .initializer("yangName")
+                        .addModifiers(KModifier.OVERRIDE)
+                        .build())
+                .addProperty(PropertySpec.builder("yangValue", Int::class)
+                        .initializer("yangValue")
+                        .addModifiers(KModifier.OVERRIDE)
                         .build())
         for ((k, v) in definition.values) {
-            enumBuilder.addEnumConstant(k.codeEnumConstantName(),
-                    TypeSpec.anonymousClassBuilder("\"%L\", %L", k, v).build())
+            enumBuilder.addEnumConstant(
+                    k.codeEnumConstantName(),
+                    TypeSpec.anonymousClassBuilder()
+                            .addSuperclassConstructorParameter("%S", k)
+                            .addSuperclassConstructorParameter("%L", v)
+                            .build()
+            )
         }
-        val file = FileSpec.builder(className.packageName(), className.simpleName())
+        val file = FileSpec.builder(className.packageName, className.simpleName)
                 .addType(enumBuilder.build())
                 .build()
         //println("Writing: " + className)

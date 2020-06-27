@@ -20,6 +20,7 @@
 package org.wintersleep.yang.codegen
 
 import com.squareup.kotlinpoet.*
+import com.squareup.kotlinpoet.ParameterizedTypeName.Companion.plusParameter
 import org.opendaylight.yangtools.yang.model.api.*
 import org.opendaylight.yangtools.yang.model.api.type.*
 import org.wintersleep.yang.model.*
@@ -58,7 +59,7 @@ class DataNodeContainerGenerator(
                 .superclass(YangContainerMetaData::class)
                 .primaryConstructor(FunSpec.constructorBuilder()
                         .addParameter(ParameterSpec.builder("yangParent",
-                                YangContainerMetaData::class.asTypeName().asNullable())
+                                YangContainerMetaData::class.asTypeName().copy(nullable = true))
                                 .defaultValue("null")
                                 .build())
                         .build())
@@ -74,7 +75,7 @@ class DataNodeContainerGenerator(
             addProperty(classBuilder, duplicateFieldNames, childNode)
         }
         //println("Writing $className")
-        val file = FileSpec.builder(className.packageName(), className.simpleName())
+        val file = FileSpec.builder(className.packageName, className.simpleName)
                 .addType(classBuilder.build())
                 .build()
         file.writeTo(outputDir)
@@ -187,9 +188,7 @@ class DataNodeContainerGenerator(
             return leafOrList(childNode, YangDecimalParameter::class, YangDecimalListParameter::class)
         } else if (childNode.type is EnumTypeDefinition || childNode.type.baseType is EnumTypeDefinition) {
             val enumClassName = childNode.kClassName
-            return ParameterizedTypeName.get(
-                    leafOrList(childNode, YangEnumParameter::class, YangEnumListParameter::class),
-                    enumClassName)
+            return leafOrList(childNode, YangEnumParameter::class, YangEnumListParameter::class).plusParameter(enumClassName)
         } else if (childNode.type is StringTypeDefinition || childNode.type.baseType is StringTypeDefinition) {
             return leafOrList(childNode, YangStringParameter::class, YangStringListParameter::class)
         } else if (childNode.type is BinaryTypeDefinition || childNode.type.baseType is BinaryTypeDefinition) {
